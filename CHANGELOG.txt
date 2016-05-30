@@ -1,0 +1,13 @@
+
+
+Changes in 1.1 from 1.0 (Initial Public Release)
+
+	- [ADDED] Publish function is now overloaded to provide an option to supply the Retain flag on the message. Default is false if not supplied.
+
+	- [ADDED] OnConAck handler now supplies the Connect Return argument and raises an exception if it is not CONACC (Literal = 0).
+
+	- [ADDED] Subscribe and Unsubsribe are now functions that return the message ID used in the message which can be checked against the message id returned in the SUBACK event handler to verify a particular request has been fulfilled.
+	
+	- [ADDED] Event handlers for SUBACK and UNSUBACK now contain the message ID and granted QoS level (for SUBACK).
+
+	- [ADDED] JavaDoc Code Documentation comments describing public functions to Allow DelphiJavaDoc to generate documentation.
