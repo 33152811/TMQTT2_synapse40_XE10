@@ -1,10 +1,11 @@
-program MQTT_Test;
+program TMQTTTest;
 
 uses
   Forms,
   uMain in 'uMain.pas' {fMain},
-  MQTTReadThread in 'TMQTTClient\MQTTReadThread.pas',
-  MQTT in 'TMQTTClient\MQTT.pas';
+  MQTT in 'TMQTT\MQTT.pas',
+  MQTTHeaders in 'TMQTT\MQTTHeaders.pas',
+  MQTTReadThread in 'TMQTT\MQTTReadThread.pas';
 
 {$R *.res}
 

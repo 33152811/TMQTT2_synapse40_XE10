@@ -1,9 +1,9 @@
 object fMain: TfMain
   Left = 0
   Top = 0
-  Caption = 'TMQTTClient Test Project'
+  Caption = 'TMQTT Version 2 Test'
   ClientHeight = 413
-  ClientWidth = 426
+  ClientWidth = 421
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -49,7 +49,6 @@ object fMain: TfMain
     Font.Name = 'Tahoma'
     Font.Style = [fsUnderline]
     ParentFont = False
-    OnClick = lblUrlClick
   end
   object lblPrimarilyTested: TLabel
     Left = 8
@@ -71,7 +70,6 @@ object fMain: TfMain
     Font.Name = 'Tahoma'
     Font.Style = [fsUnderline]
     ParentFont = False
-    OnClick = lblUrlClick
   end
   object lblLimits: TLabel
     Left = 8
@@ -139,7 +137,7 @@ object fMain: TfMain
     Width = 202
     Height = 21
     TabOrder = 4
-    Text = 'This is a test Message'
+    Text = 'This is a test message'
   end
   object eIP: TEdit
     Left = 8
@@ -147,7 +145,7 @@ object fMain: TfMain
     Width = 202
     Height = 21
     TabOrder = 5
-    Text = 'localhost'
+    Text = '127.0.0.1'
   end
   object ePort: TEdit
     Left = 216

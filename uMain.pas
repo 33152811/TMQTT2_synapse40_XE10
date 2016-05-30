@@ -4,10 +4,20 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, MQTT, MQTTReadThread, ExtCtrls, ShellAPI;
+  Dialogs, StdCtrls, ExtCtrls,
+
+  MQTT;
 
 type
   TfMain = class(TForm)
+    lblHeader: TLabel;
+    lnlMQTTInfo: TLabel;
+    lblMQTTUrl: TLabel;
+    lblPrimarilyTested: TLabel;
+    lblRSMBUrl: TLabel;
+    lblLimits: TLabel;
+    lblLimits2: TLabel;
+    lblSynapse: TLabel;
     btnConnect: TButton;
     btnDisconnect: TButton;
     btnPublish: TButton;
@@ -19,25 +29,20 @@ type
     btnSubscribe: TButton;
     eSubTopic: TEdit;
     mStatus: TMemo;
-    lblHeader: TLabel;
-    lnlMQTTInfo: TLabel;
-    lblMQTTUrl: TLabel;
-    lblPrimarilyTested: TLabel;
-    lblRSMBUrl: TLabel;
-    lblLimits: TLabel;
-    lblLimits2: TLabel;
-    lblSynapse: TLabel;
     procedure btnConnectClick(Sender: TObject);
     procedure btnDisconnectClick(Sender: TObject);
-    procedure btnPublishClick(Sender: TObject);
     procedure btnPingClick(Sender: TObject);
-    procedure OnConnAck(Sender: TObject; ReturnCode: Integer);
-    procedure OnPingResp(Sender: TObject);
-   // procedure OnSubAck(Sender: TObject);
-    procedure OnUnSubAck(Sender: TObject);
-    procedure OnPublish(Sender: TObject; topic, payload: string);
+    procedure btnPublishClick(Sender: TObject);
     procedure btnSubscribeClick(Sender: TObject);
-    procedure lblUrlClick(Sender: TObject);
+    procedure GotConnAck(Sender: TObject; ReturnCode: integer);
+    procedure GotPingResp(Sender: TObject);
+    procedure GotSubAck(Sender: TObject; MessageID: integer; GrantedQoS: Array of integer);
+    procedure GotUnSubAck(Sender: TObject; MessageID: integer);
+    procedure GotPub(Sender: TObject; topic, payload: Ansistring);
+    procedure GotPubAck(Sender: TObject; MessageID: integer);
+    procedure GotPubRec(Sender: TObject; MessageID: integer);
+    procedure GotPubRel(Sender: TObject; MessageID: integer);
+    procedure GotPubComp(Sender: TObject; MessageID: integer);
   private
     { Private declarations }
   public
@@ -46,71 +51,112 @@ type
 
 var
   fMain: TfMain;
-  MQTTClient: TMQTTClient;
-  fRL: TBytes;
+  MQTT: TMQTT;
 
 implementation
 
 {$R *.dfm}
 
-procedure TfMain.OnPublish(Sender: TObject; topic, payload: string);
-begin
-  mStatus.Lines.Add('Publish Received. Topic: '+ topic + ' Payload: ' + payload);
-end;
-
-//procedure TfMain.OnSubAck(Sender: TObject);
-//begin
-//  mStatus.Lines.Add('Sub Ack Received');
-//end;
-
-procedure TfMain.OnUnSubAck(Sender: TObject);
-begin
-  mStatus.Lines.Add('Unsubscribe Ack Received');
-end;
-
-procedure TfMain.OnConnAck(Sender: TObject; ReturnCode: Integer);
-begin
-  mStatus.Lines.Add('Connection Acknowledged, Return Code: ' + IntToStr(Ord(ReturnCode)));
-end;
-
-procedure TfMain.OnPingResp(Sender: TObject);
-begin
-  mStatus.Lines.Add('PING! PONG!');
-end;
-
 procedure TfMain.btnConnectClick(Sender: TObject);
 begin
-  MQTTClient := TMQTTClient.Create(eIP.Text, StrToInt(ePort.Text));
-  MQTTClient.OnConnAck := OnConnAck;
-  MQTTClient.OnPingResp := OnPingResp;
-  MQTTClient.OnPublish := OnPublish;
-  //MQTTClient.OnSubAck := OnSubAck;
-  MQTTClient.Connect;
+  MQTT := TMQTT.Create(eIP.Text, StrToInt(ePort.Text));
+  MQTT.WillTopic := '/clients/will';
+  MQTT.WillMsg := 'Broker died!';
+  // Events
+  MQTT.OnConnAck := GotConnAck;
+  MQTT.OnPublish := GotPub;
+  MQTT.OnPingResp := GotPingResp;
+  MQTT.OnSubAck := GotSubAck;
+  MQTT.OnUnSubAck := GotUnSubAck;
+  MQTT.OnPubAck := GotPubAck;
+
+  if MQTT.Connect then
+    mStatus.Lines.Add('Connected to ' + eIP.Text + ' on ' + ePort.Text)
+  else
+    mStatus.Lines.Add('Failed to connect');
 end;
 
 procedure TfMain.btnDisconnectClick(Sender: TObject);
 begin
-  MQTTClient.Disconnect;
+  if (Assigned(MQTT)) then
+    begin
+      MQTT.Disconnect;
+      mStatus.Lines.Add('Disconnected');
+      FreeAndNil(MQTT);
+    end;
 end;
 
 procedure TfMain.btnPingClick(Sender: TObject);
 begin
-  MQTTClient.PingReq;
+  if (Assigned(MQTT)) then
+    begin
+      mStatus.Lines.Add('Ping');
+      MQTT.PingReq;
+    end;
 end;
 
 procedure TfMain.btnPublishClick(Sender: TObject);
 begin
-  MQTTClient.Publish(eTopic.Text, eMessage.Text);
+  if (Assigned(MQTT)) then
+    begin
+      MQTT.Publish(eTopic.Text, eMessage.Text);
+      mStatus.Lines.Add('Published');
+    end;
 end;
 
 procedure TfMain.btnSubscribeClick(Sender: TObject);
 begin
-  MQTTClient.Subscribe(eSubTopic.Text);
+  if (Assigned(MQTT)) then
+    begin
+      MQTT.Subscribe(eSubTopic.Text, 0);
+      mStatus.Lines.Add('Subscribe');
+    end;
 end;
 
-procedure TfMain.lblUrlClick(Sender: TObject);
+procedure TfMain.GotConnAck(Sender: TObject; ReturnCode: integer);
 begin
-  ShellExecute(self.WindowHandle,'open',PChar((Sender as TLabel).Caption),nil,nil, SW_SHOWNORMAL);
+  mStatus.Lines.Add('Connection Acknowledged: ' + IntToStr(ReturnCode));
+end;
+
+procedure TfMain.GotPingResp(Sender: TObject);
+begin
+  mStatus.Lines.Add('PONG!');
+end;
+
+procedure TfMain.GotPub(Sender: TObject; topic, payload: Ansistring);
+begin
+  mStatus.Lines.Add('Message Recieved on ' + topic + ' payload: ' + payload);
+end;
+
+procedure TfMain.GotPubAck(Sender: TObject; MessageID: integer);
+begin
+  mStatus.Lines.Add('Got PubAck ' + IntToStr(MessageID));
+end;
+
+procedure TfMain.GotPubComp(Sender: TObject; MessageID: integer);
+begin
+  mStatus.Lines.Add('Got PubComp ' + IntToStr(MessageID));
+end;
+
+procedure TfMain.GotPubRec(Sender: TObject; MessageID: integer);
+begin
+  mStatus.Lines.Add('Got PubRec ' + IntToStr(MessageID));
+end;
+
+procedure TfMain.GotPubRel(Sender: TObject; MessageID: integer);
+begin
+  mStatus.Lines.Add('Got PubRel ' + IntToStr(MessageID));
+end;
+
+procedure TfMain.GotSubAck(Sender: TObject; MessageID: integer;
+  GrantedQoS: array of integer);
+begin
+  mStatus.Lines.Add('Got SubAck ' + IntToStr(MessageID));
+end;
+
+procedure TfMain.GotUnSubAck(Sender: TObject; MessageID: integer);
+begin
+  mStatus.Lines.Add('Got UnSubAck ' + IntToStr(MessageID));
 end;
 
 end.
